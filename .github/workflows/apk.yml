@@ -10,22 +10,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Proje klasörünü bul
+        run: |
+          DIR=$(dirname "$(find . -name capacitor.config.json -not -path '*/node_modules/*' -not -path '*/android/*' | head -n 1)")
+          if [ -z "$DIR" ] || [ ! -f "$DIR/package.json" ]; then
+            echo "package.json veya capacitor.config.json bulunamadı. Bu dosyaları yükle."; exit 1
+          fi
+          echo "Proje klasörü: $DIR"
+          echo "APP_DIR=$DIR" >> $GITHUB_ENV
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      - run: npm ci
-      - run: npx cap sync android
+
+      - name: Paketleri yükle
+        working-directory: ${{ env.APP_DIR }}
+        run: npm install
+
+      - name: Web dosyalarını Android projesine kopyala
+        working-directory: ${{ env.APP_DIR }}
+        run: npx cap sync android
+
       - name: APK derle
-        working-directory: android
+        working-directory: ${{ env.APP_DIR }}/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+
       - uses: actions/upload-artifact@v4
         with:
           name: nefes-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.APP_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
