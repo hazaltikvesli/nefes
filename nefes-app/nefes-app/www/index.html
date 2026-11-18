@@ -278,9 +278,10 @@ figure.card .cap2{font-size:.8rem;color:var(--muted);margin-bottom:.5rem}
     <p class="muted">Tamamlanmamış ceza</p>
     <p><span class="big" id="p-out">0</span> <span class="of">şınav</span></p>
     <p class="rule" id="p-rule"></p>
+    <p class="rule" id="p-spare" hidden style="color:var(--ok)"></p>
     <div class="kv">
       <div><b id="p-today">0</b><span>bugünkü ceza</span></div>
-      <div><b id="p-done">0</b><span>toplam yapılan</span></div>
+      <div><b id="p-done">0</b><span>bugün yapılan</span></div>
       <div><b id="p-over">0</b><span>bugün aşan sigara</span></div>
     </div>
   </div>
@@ -839,9 +840,9 @@ function ensureDays(){
   persistSettings(); persistDays();
 }
 function startNewDay(){
-  const prevKey = todayKey(), prev = entriesFor(prevKey).length;
+  const prevKey = todayKey(), prev = entriesFor(prevKey).length, prevOut = penaltyTotals().out;
   const t = Date.now(); S.dayStarts.push(t); persistDays(); renderAll();
-  toast(`Yeni gün başladı. Önceki gün: ${prev} sigara.`, 'Geri al', () => { S.dayStarts = S.dayStarts.filter(x => x !== t); persistDays(); renderAll(); });
+  toast(`Yeni gün başladı. Önceki gün: ${prev} sigara${prevOut ? `, ${prevOut} şınav cezası silindi` : ''}.`, 'Geri al', () => { S.dayStarts = S.dayStarts.filter(x => x !== t); persistDays(); renderAll(); });
 }
 const entriesFor = k => S.entries.filter(e => dayKeyOf(e.ts) === k).sort((a,b)=>a.ts-b.ts);
 const unitPrice = () => S.settings.packPrice / S.settings.packSize;
@@ -852,12 +853,14 @@ function requiredFor(count){
   let r = st.penaltyMode === 'progressive' ? p * n * (n+1) / 2 : p * n;
   return st.penaltyCap > 0 ? Math.min(r, st.penaltyCap) : r;
 }
+/* Penalty lives within the current day only: push-ups done today (before or after the cigarette)
+   pay today's penalty, and pressing "Yeni güne başla" clears both the penalty and the push-up count. */
 function penaltyTotals(){
-  const by = {}; S.entries.forEach(e => { const k = dayKeyOf(e.ts); by[k] = (by[k]||0) + 1; });
-  let req = 0; Object.values(by).forEach(c => req += requiredFor(c));
-  const cred = S.sessions.reduce((a,s)=>a+(s.credited||0),0);
-  const reps = S.sessions.reduce((a,s)=>a+(s.reps||0),0);
-  return {req, cred, reps, out: Math.max(0, req - cred)};
+  const tk = todayKey();
+  const todayReq = requiredFor(entriesFor(tk).length);
+  const todayReps = S.sessions.filter(x => dayKeyOf(x.ts) === tk).reduce((a,x)=>a+(x.reps||0),0);
+  const out = Math.max(0, todayReq - todayReps);
+  return {req: todayReq, cred: Math.min(todayReq, todayReps), reps: todayReps, out, todayReps, spare: Math.max(0, todayReps - todayReq)};
 }
 
 /* ---------- lungs ---------- */
@@ -885,7 +888,7 @@ function renderHome(){
   $('#h-day').textContent = sameDate(csD, now) ? `Gün ${fmtTime(cs)} itibarıyla başladı` : `Gün ${csD.toLocaleDateString('tr-TR',{day:'numeric',month:'long'})} ${fmtTime(cs)} itibarıyla sürüyor`;
   const nd = !sameDate(csD, now);
   $('#newday').hidden = !nd;
-  if(nd) $('#nd-s').textContent = c ? `Önceki gün ${c} sigara içtin. Uyandıysan sayacı sıfırla.` : 'Uyandıysan sayacı sıfırla.';
+  if(nd){ const po = penaltyTotals().out; $('#nd-s').textContent = (c ? `Önceki gün ${c} sigara içtin.` : '') + (po ? ` Yeni güne geçince kalan ${po} şınav cezası silinir.` : '') + ' Uyandıysan sayacı sıfırla.'; }
   $('#h-count').textContent = c; $('#h-of').textContent = '/ ' + L;
   const segN = Math.max(L, c);
   $('#h-segs').innerHTML = Array.from({length: segN}, (_,i) => `<i class="${i < Math.min(c,L) ? 'on' : (i < c ? 'over' : '')}"></i>`).join('');
@@ -1027,18 +1030,20 @@ function renderPush(){
   const t = penaltyTotals(), c = entriesFor(todayKey()).length, st = S.settings;
   $('#p-out').textContent = t.out;
   $('#p-today').textContent = requiredFor(c);
-  $('#p-done').textContent = t.reps;
+  $('#p-done').textContent = t.todayReps;
   $('#p-over').textContent = Math.max(0, c - st.dailyLimit);
   const p = st.pushupsPerExcess || 10;
   $('#p-rule').textContent = (st.penaltyMode === 'progressive'
     ? `Kural: sınırı aşan 1. sigara ${p}, 2. sigara ${2*p}, 3. sigara ${3*p} şınav…`
-    : `Kural: sınırı aşan n sigara için n × ${p} şınav.`) + (st.penaltyCap > 0 ? ` Günlük tavan ${st.penaltyCap}.` : '');
+    : `Kural: sınırı aşan n sigara için n × ${p} şınav.`) + (st.penaltyCap > 0 ? ` Günlük tavan ${st.penaltyCap}.` : '') + ' Ceza ve şınavlar yeni günde sıfırlanır.';
   $('#btn-cam').textContent = t.out > 0 ? 'Kamerayla şınava başla' : 'Borç yok, yine de antrenman yap';
+  const sp = $('#p-spare'); sp.hidden = !t.spare;
+  if(t.spare) sp.textContent = `Bugün cezadan fazla ${t.spare} şınav yaptın. Bugün sınırı aşarsan önce bunlar düşülür.`;
   const log = S.sessions.slice().sort((a,b)=>b.ts-a.ts).slice(0, 20);
   $('#p-log').innerHTML = log.length ? log.map(s => {
     const d = new Date(s.ts);
     const badge = '';
-    return `<li><span>${d.toLocaleDateString('tr-TR',{day:'numeric',month:'short'})}, ${fmtTime(s.ts)}${badge}</span><span><b>${s.reps}</b> tekrar${s.credited < s.reps ? ` <span class="muted">(${s.credited} borçtan düştü)</span>` : ''}</span></li>`;
+    return `<li><span>${d.toLocaleDateString('tr-TR',{day:'numeric',month:'short'})}, ${fmtTime(s.ts)}${badge}</span><span><b>${s.reps}</b> tekrar</span></li>`;
   }).join('') : '<li class="empty" style="border:0">Henüz seans yok.</li>';
 }
 
@@ -1178,10 +1183,13 @@ function stopCam(){
 function finishCam(){
   const reps = cam.reps; stopCam();
   if(!reps){ toast('Tekrar sayılmadı, seans kaydedilmedi.'); return; }
-  const out = penaltyTotals().out;
-  const s = {id: rid(), ts: Date.now(), reps, credited: Math.min(reps, out), method: 'camera'};
-  S.sessions.push(s); persistSession(s); renderAll();
-  toast(s.credited ? `${reps} şınav kaydedildi, ${s.credited} tanesi borçtan düştü.` : `${reps} şınav kaydedildi.`);
+  const before = penaltyTotals().out;
+  const s = {id: rid(), ts: Date.now(), reps, method: 'camera'};
+  S.sessions.push(s);
+  const after = penaltyTotals();
+  s.credited = before - after.out;
+  persistSession(s); renderAll();
+  toast(s.credited ? `${reps} şınav kaydedildi, ${s.credited} tanesi cezadan düştü.` : after.spare ? `${reps} şınav kaydedildi. Bugün sınırı aşarsan cezadan düşecek.` : `${reps} şınav kaydedildi.`);
 }
 
 /* ---------- settings ---------- */
