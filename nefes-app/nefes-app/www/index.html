@@ -85,6 +85,7 @@ button{cursor:pointer}
 .newday .nd-s{font-size:.85rem;color:var(--muted)}
 .newday .primary{flex:none;white-space:nowrap}
 .debt{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:1rem;padding:.9rem 1rem;border-radius:14px;background:var(--danger-soft);color:var(--ink);text-decoration:none;border:0;width:100%;text-align:left}
+.debt[hidden]{display:none}
 .debt strong{color:var(--danger)}
 .debt .go{font-weight:700;color:var(--danger);white-space:nowrap}
 
@@ -185,9 +186,39 @@ figure.card .cap2{font-size:.8rem;color:var(--muted);margin-bottom:.5rem}
 .badge{font-size:.72rem;border-radius:999px;padding:.05rem .5rem;margin-left:.4rem;background:var(--accent-soft)}
 .badge.test{background:var(--warn-soft)}
 
+/* calendar */
+.calhead{display:flex;align-items:center;justify-content:space-between;margin:1rem 0 .6rem}
+.calhead h2{margin:0;font-size:1.2rem;text-transform:capitalize}
+.calnav{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;width:44px;height:40px;font-size:1.2rem;font-weight:700}
+.calnav:disabled{opacity:.35}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.calgrid .wd{text-align:center;font-size:.72rem;color:var(--muted);font-weight:600;padding-bottom:.2rem}
+.cday{aspect-ratio:1/1.05;border:1.5px solid transparent;border-radius:12px;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;font-variant-numeric:tabular-nums}
+.cday .dn{font-size:.72rem;color:var(--muted);font-weight:600}
+.cday .dc{font-family:"Bricolage Grotesque",Figtree,sans-serif;font-weight:700;font-size:1.05rem;line-height:1}
+.cday.blank{background:none}
+.cday.nodata .dc{color:var(--line)}
+.cday.ok{background:var(--accent-soft)}
+.cday.full{background:var(--warn-soft)}
+.cday.over{background:var(--danger-soft)}
+.cday.over .dc{color:var(--danger)}
+.cday.today{border-color:var(--accent)}
+.cday[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink) inset}
+.callegend{display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-top:.7rem;font-size:.78rem;color:var(--muted)}
+.callegend i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:.35rem;vertical-align:-1px}
+.daycard{margin-top:1rem;background:var(--surface);border-radius:18px;padding:1rem}
+.daycard h3{font-size:1.15rem}
+.daystats{display:grid;grid-template-columns:repeat(3,1fr);margin:.8rem 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.daystats div{padding:.6rem 0;text-align:center}
+.daystats div+div{border-left:1px solid var(--line)}
+.daystats b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:1.25rem}
+.daystats span{font-size:.72rem;color:var(--muted)}
+.daytags{display:flex;flex-wrap:wrap;gap:.35rem;margin:.2rem 0 .6rem}
+.daytags span{font-size:.8rem;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:.1rem .55rem}
+.daypen{font-size:.88rem;margin-bottom:.4rem}
 /* tabbar */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabbar nav{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabbar nav{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 .tabbar button{border:0;background:none;padding:.55rem 0 .6rem;font-size:.72rem;font-weight:600;color:var(--muted);display:grid;justify-items:center;gap:.15rem}
 .tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tabbar button[aria-current="page"]{color:var(--accent)}
@@ -253,6 +284,19 @@ figure.card .cap2{font-size:.8rem;color:var(--muted);margin-bottom:.5rem}
   <button class="debt" id="h-debt" hidden></button>
   <h2>Bugünün kaydı</h2>
   <ol class="log" id="h-log"></ol>
+</section>
+
+<!-- TAKVİM -->
+<section id="v-cal" class="view" hidden>
+  <h1>Takvim</h1>
+  <div class="calhead">
+    <button class="calnav" id="cal-prev" aria-label="Önceki ay">‹</button>
+    <h2 id="cal-title"></h2>
+    <button class="calnav" id="cal-next" aria-label="Sonraki ay">›</button>
+  </div>
+  <div class="calgrid" id="cal-grid"></div>
+  <div class="callegend"><span><i style="background:var(--accent-soft)"></i>Sınırın altında</span><span><i style="background:var(--warn-soft)"></i>Tam sınırda</span><span><i style="background:var(--danger-soft)"></i>Sınır aşıldı</span></div>
+  <div class="daycard" id="cal-day"></div>
 </section>
 
 <!-- GRAFİKLER -->
@@ -387,6 +431,7 @@ figure.card .cap2{font-size:.8rem;color:var(--muted);margin-bottom:.5rem}
 
 <div class="tabbar"><nav aria-label="Ana menü">
   <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M10 6c-3-1-6 2-6.5 7-.4 4 1.5 6 4.5 5.5 2-.3 2-2 2-4zM14 6c3-1 6 2 6.5 7 .4 4-1.5 6-4.5 5.5-2-.3-2-2-2-4zM12 2v8"/></svg>Bugün</button>
+  <button data-tab="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Takvim</button>
   <button data-tab="stats"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>Grafikler</button>
   <button data-tab="push" id="tab-push"><svg viewBox="0 0 24 24"><path d="M3 17h4l3-4 4 2 4-5h3M3 21h18"/></svg>Şınav</button>
   <button data-tab="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>Ayarlar</button>
@@ -1024,6 +1069,62 @@ function renderStats(){
   $('#st-combo').innerHTML = hbars(Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,6), 0, 'combo');
 }
 
+/* ---------- calendar ---------- */
+let calMonth = null, calSel = null;
+const dateKeyOf = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+function calIndex(){
+  /* a day belongs to the calendar date on which "Yeni güne başla" was pressed */
+  const by = {};
+  S.dayStarts.forEach(st => { const k = dateKeyOf(new Date(st)); (by[k] = by[k] || []).push('d' + st); });
+  return by;
+}
+function dayInfo(keys){
+  const es = S.entries.filter(e => keys.includes(dayKeyOf(e.ts))).sort((a,b)=>a.ts-b.ts);
+  const reps = S.sessions.filter(x => keys.includes(dayKeyOf(x.ts))).reduce((a,x)=>a+(x.reps||0),0);
+  const req = keys.reduce((a,k)=>a+requiredFor(S.entries.filter(e => dayKeyOf(e.ts) === k).length),0);
+  return {es, count: es.length, spend: es.reduce((a,e)=>a+e.unitPrice,0), reps, req};
+}
+function renderCal(){
+  if(!S.settings) return;
+  const idx = calIndex(), now = new Date(), todayDate = dateKeyOf(new Date(currentStart()));
+  if(!calMonth) calMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  if(!calSel) calSel = todayDate;
+  $('#cal-title').textContent = calMonth.toLocaleDateString('tr-TR', {month:'long', year:'numeric'});
+  const first = S.dayStarts.length ? new Date(S.dayStarts[0]) : now;
+  $('#cal-prev').disabled = calMonth <= new Date(first.getFullYear(), first.getMonth(), 1);
+  $('#cal-next').disabled = calMonth >= new Date(now.getFullYear(), now.getMonth(), 1);
+  const L = S.settings.dailyLimit, y = calMonth.getFullYear(), m = calMonth.getMonth();
+  const lead = (new Date(y, m, 1).getDay() + 6) % 7, days = new Date(y, m+1, 0).getDate();
+  let h = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].map(w => `<span class="wd">${w}</span>`).join('');
+  for(let i = 0; i < lead; i++) h += '<span class="cday blank"></span>';
+  for(let d = 1; d <= days; d++){
+    const k = y+'-'+pad(m+1)+'-'+pad(d), keys = idx[k];
+    let cls = 'cday', val = '·', label = `${d} ${calMonth.toLocaleDateString('tr-TR',{month:'long'})}`;
+    if(keys){ const c = dayInfo(keys).count; val = c; cls += c > L ? ' over' : c === L ? ' full' : ' ok'; label += `, ${c} sigara`; }
+    else { cls += ' nodata'; label += ', kayıt yok'; }
+    if(k === todayDate) cls += ' today';
+    h += `<button class="${cls}" data-date="${k}" aria-pressed="${k === calSel}" aria-label="${label}"><span class="dn">${d}</span><span class="dc">${val}</span></button>`;
+  }
+  $('#cal-grid').innerHTML = h;
+  renderCalDay(idx);
+}
+function renderCalDay(idx){
+  const box = $('#cal-day'), keys = (idx || calIndex())[calSel];
+  const [yy, mm, dd] = calSel.split('-').map(Number), title = new Date(yy, mm-1, dd).toLocaleDateString('tr-TR', {weekday:'long', day:'numeric', month:'long'});
+  if(!keys){ box.innerHTML = `<h3>${esc(title)}</h3><p class="muted" style="margin-top:.4rem">Bu tarihte başlatılmış bir gün yok.</p>`; return; }
+  const inf = dayInfo(keys), L = S.settings.dailyLimit;
+  const tc = {}; inf.es.forEach(e => e.tags.forEach(t => tc[t] = (tc[t]||0)+1));
+  const tags = Object.entries(tc).sort((a,b)=>b[1]-a[1]).map(([t,n]) => `<span>${esc(t)} ×${n}</span>`).join('');
+  const starts = keys.map(k => fmtTime(+k.slice(1))).join(', ');
+  let pen = '';
+  if(inf.req) pen = `<p class="daypen">Şınav cezası <b>${inf.req}</b>, yapılan <b>${inf.reps}</b>${inf.reps >= inf.req ? ' <span style="color:var(--ok)">(tamamlandı)</span>' : ' <span style="color:var(--danger)">(eksik kaldı)</span>'}</p>`;
+  else if(inf.reps) pen = `<p class="daypen">Ceza yok; ${inf.reps} şınav yapıldı.</p>`;
+  const list = inf.es.length ? inf.es.map((e,i) => `<li><time class="${i >= L ? 'over-mark' : ''}">${fmtTime(e.ts)}</time><button class="tagbtn" data-edit="${e.id}" aria-label="${fmtTime(e.ts)} kaydının etiketlerini düzenle"><span class="tags">${e.tags.length ? e.tags.map(t=>`<span>${esc(t)}</span>`).join('') : '<span class="none">Etiket yok</span>'}</span></button><span class="muted" style="font-size:.8rem">#${i+1}</span></li>`).join('') : '<li class="empty" style="display:block;border:0">Bu gün sigara kaydı yok.</li>';
+  box.innerHTML = `<h3>${esc(title)}</h3><p class="muted" style="font-size:.85rem">Gün ${starts} itibarıyla başladı</p>
+    <div class="daystats"><div><b style="${inf.count > L ? 'color:var(--danger)' : ''}">${inf.count}</b><span>sigara (sınır ${L})</span></div><div><b>${TRY0.format(inf.spend)}</b><span>harcanan</span></div><div><b>${inf.reps}</b><span>şınav</span></div></div>
+    ${pen}${tags ? `<div class="daytags">${tags}</div>` : ''}<ol class="log">${list}</ol>`;
+}
+
 /* ---------- push-ups ---------- */
 function renderPush(){
   if(!S.settings) return;
@@ -1236,11 +1337,15 @@ function go(t){
   window.scrollTo(0, 0);
   renderAll();
 }
-function renderAll(){ if(!S.settings) return; renderHome(); if(tab === 'stats') renderStats(); if(tab === 'push') renderPush(); if(tab === 'set') renderSettings(); }
+function renderAll(){ if(!S.settings) return; renderHome(); if(tab === 'cal') renderCal(); if(tab === 'stats') renderStats(); if(tab === 'push') renderPush(); if(tab === 'set') renderSettings(); }
 
 /* ---------- events ---------- */
 $('#btn-add').addEventListener('click', quickAdd);
 $('#btn-newday').addEventListener('click', startNewDay);
+$('#cal-grid').addEventListener('click', ev => { const b = ev.target.closest('[data-date]'); if(!b) return; calSel = b.dataset.date; renderCal(); });
+$('#cal-prev').addEventListener('click', () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()-1, 1); renderCal(); });
+$('#cal-next').addEventListener('click', () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 1); renderCal(); });
+$('#cal-day').addEventListener('click', ev => { const b = ev.target.closest('[data-edit]'); if(!b) return; const e = S.entries.find(x => x.id === b.dataset.edit); if(e) openSheet(e, 0); });
 $('#h-debt').addEventListener('click', () => go('push'));
 $('#h-log').addEventListener('click', ev => { const b = ev.target.closest('[data-edit]'); if(!b) return; const e = S.entries.find(x => x.id === b.dataset.edit); if(e) openSheet(e, 0); });
 $('#sh-chips').addEventListener('click', ev => { const b = ev.target.closest('[data-tag]'); if(!b) return; const t = b.dataset.tag; sheetTags = sheetTags.includes(t) ? sheetTags.filter(x => x !== t) : sheetTags.concat(t); b.setAttribute('aria-pressed', sheetTags.includes(t)); });
@@ -1291,10 +1396,10 @@ $('#onb-form').addEventListener('submit', ev => {
 /* ---------- boot ---------- */
 const startTab = (location.hash || '').slice(1);
 if(!S.settings) $('#onb').hidden = false; else ensureDays();
-go(['home','stats','push','set'].includes(startTab) ? startTab : 'home');
+go(['home','cal','stats','push','set'].includes(startTab) ? startTab : 'home');
 setInterval(() => { if(tab === 'home') renderHome(); }, 30000);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) renderAll(); });
-window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if(t !== tab && ['home','stats','push','set'].includes(t)) go(t); });
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if(t !== tab && ['home','cal','stats','push','set'].includes(t)) go(t); });
 initCloud();
 })();
 </script>
