@@ -1,8 +1,0 @@
-{
-  "appId": "com.nefes.app",
-  "appName": "Nefes",
-  "webDir": "www",
-  "android": {
-    "allowMixedContent": false
-  }
-}
